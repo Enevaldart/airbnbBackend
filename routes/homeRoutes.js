@@ -47,6 +47,36 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Update a home by ID
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, description, location, price, imageUrl, rating } = req.body;
+
+    // Find the home by ID and update its details
+    const updatedHome = await Home.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        description,
+        location,
+        price,
+        imageUrl,
+        rating,
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedHome) {
+      return res.status(404).json({ message: 'Home not found' });
+    }
+
+    res.json(updatedHome);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
+});
+
+
 // Add a review to a home
 router.post('/:id/review', async (req, res) => {
   const { user, comment, rating } = req.body;
