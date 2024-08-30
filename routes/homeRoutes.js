@@ -156,5 +156,37 @@ router.get('/:id/reviews', async (req, res) => {
   }
 });
 
+// Get a specific review for a specific home by review ID
+router.get('/:homeId/reviews/:reviewId', async (req, res) => {
+  try {
+    // Check if the provided home ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.homeId)) {
+      return res.status(400).json({ message: 'Invalid home ID' });
+    }
+
+    // Check if the provided review ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.reviewId)) {
+      return res.status(400).json({ message: 'Invalid review ID' });
+    }
+
+    // Find the home by ID
+    const home = await Home.findById(req.params.homeId);
+    if (!home) {
+      return res.status(404).json({ message: 'Home not found' });
+    }
+
+    // Find the specific review by ID within the home's reviews
+    const review = home.reviews.id(req.params.reviewId);
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+
+    // Return the specific review
+    res.json(review);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 
 module.exports = router;
