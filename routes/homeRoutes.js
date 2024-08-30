@@ -76,6 +76,20 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// Delete a home by ID
+router.delete('/:id', async (req, res) => {
+  try {
+    const home = await Home.findByIdAndDelete(req.params.id);
+
+    if (!home) {
+      return res.status(404).json({ message: 'Home not found' });
+    }
+
+    res.json({ message: 'Home deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 // Add a review to a home
 router.post('/:id/review', async (req, res) => {
