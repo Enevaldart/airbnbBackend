@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Home = require('../models/home');
 
@@ -79,14 +80,22 @@ router.put('/:id', async (req, res) => {
 // Delete a home by ID
 router.delete('/:id', async (req, res) => {
   try {
+    // Check if the provided ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid home ID' });
+    }
+
     const home = await Home.findByIdAndDelete(req.params.id);
 
+    // If the home is not found, return a 404 error
     if (!home) {
       return res.status(404).json({ message: 'Home not found' });
     }
 
+    // If the home is successfully deleted, return a success message
     res.json({ message: 'Home deleted successfully' });
   } catch (err) {
+    // If there's a server error, return a 500 error
     res.status(500).json({ message: err.message });
   }
 });
