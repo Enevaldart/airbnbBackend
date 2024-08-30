@@ -25,12 +25,25 @@ router.post('/', async (req, res) => {
     rating,
     reviews: [],
   });
-
+ 
   try {
     const savedHome = await home.save();
     res.status(201).json(savedHome);
   } catch (err) {
     res.status(400).json({ message: err.message });
+  }
+});
+
+// Get a single home by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const home = await Home.findById(req.params.id);
+    if (!home) {
+      return res.status(404).json({ message: 'Home not found' });
+    }
+    res.json(home);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
 
