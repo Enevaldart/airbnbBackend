@@ -30,7 +30,7 @@ router.post("/signup", async (req, res) => {
     }
   });
 
-  
+
   router.put('/update-role/:id', async (req, res) => {
     const { role } = req.body;
     
@@ -85,6 +85,16 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
+// Get all users
+router.get('/users', async (req, res) => {
+    try {
+      const users = await User.find().select('-password'); // Exclude passwords from response
+      res.json(users);
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  });
 
 
 
