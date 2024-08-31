@@ -23,6 +23,10 @@ app.get('/', (req, res) => {
 const homeRoutes = require('./routes/homeRoutes');
 app.use('/api/homes', homeRoutes);
 
+const authRoutes = require('./routes/authRoutes');
+app.use('/api/auth', authRoutes);
+
+
 // Start the server
 const port = process.env.PORT || 5000;
 app.listen(port, () => console.log(`Server running on port ${port}`));

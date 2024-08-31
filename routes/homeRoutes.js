@@ -23,7 +23,7 @@ router.post("/", async (req, res) => {
     location,
     price,
     imageUrl,
-    rating,
+    rating: 0,
     reviews: [],
   });
 
@@ -94,8 +94,7 @@ router.put("/:id", async (req, res) => {
         description,
         location,
         price,
-        imageUrl,
-        rating,
+        imageUrl
       },
       { new: true } // Return the updated document
     );
@@ -134,36 +133,40 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Add a review to a home by ID
-router.post("/:id/review", async (req, res) => {
+router.post('/:id/review', async (req, res) => {
   const { user, comment, rating } = req.body;
 
   try {
     // Check if the provided ID is valid
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid home ID" });
+      return res.status(400).json({ message: 'Invalid home ID' });
     }
 
     // Validate review data
     if (!user || !comment || rating == null) {
-      return res
-        .status(400)
-        .json({ message: "All review fields are required" });
+      return res.status(400).json({ message: 'All review fields are required' });
     }
 
     if (rating < 1 || rating > 5) {
-      return res
-        .status(400)
-        .json({ message: "Rating must be between 1 and 5" });
+      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
 
     // Find the home by ID
     const home = await Home.findById(req.params.id);
     if (!home) {
-      return res.status(404).json({ message: "Home not found" });
+      return res.status(404).json({ message: 'Home not found' });
     }
 
     // Add the new review
     home.reviews.push({ user, comment, rating });
+
+    // Calculate the new average rating
+    const totalRating = home.reviews.reduce((acc, review) => acc + review.rating, 0);
+    const averageRating = (totalRating / home.reviews.length).toFixed(1);
+
+    // Update the home's rating
+    home.rating = averageRating;
+
     const updatedHome = await home.save();
 
     res.json(updatedHome);
