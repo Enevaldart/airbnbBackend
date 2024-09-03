@@ -194,4 +194,30 @@ router.post("/signout", authenticateToken, (req, res) => {
   res.json({ message: "Signed out successfully" });
 });
 
+// Delete a user (admin only or self-deletion)
+router.delete(
+  "/users/:id",
+  authenticateToken,
+  authorizeRole(["admin"]),
+  async (req, res) => {
+    try {
+      // Check if the user is trying to delete their own account
+      if (req.user.id === req.params.id || req.user.role === "admin") {
+        const user = await User.findByIdAndDelete(req.params.id);
+        
+        if (!user) {
+          return res.status(404).json({ message: "User not found" });
+        }
+        
+        res.json({ message: "User deleted successfully" });
+      } else {
+        res.status(403).json({ message: "Forbidden: You cannot delete this user" });
+      }
+    } catch (err) {
+      res.status(500).json({ message: err.message });
+    }
+  }
+);
+
+
 module.exports = router;
