@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const authenticateToken = require("../middleware/authenticateToken");
+const {
+  authenticateToken,
+  blacklistedTokens,
+} = require("../middleware/authenticateToken");
 const authorizeRole = require("../middleware/authorizeRole");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
@@ -179,6 +182,16 @@ router.put("/update-password", authenticateToken, async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+});
+
+// Sign out route
+router.post("/signout", authenticateToken, (req, res) => {
+  const token = req.token; // Get the token from the request
+
+  // Add the token to the blacklist
+  blacklistedTokens.add(token);
+
+  res.json({ message: "Signed out successfully" });
 });
 
 module.exports = router;
