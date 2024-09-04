@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Home = require("../models/home");
+const { authenticateToken } = require("../middleware/authenticateToken");
 
 // Get all homes
 router.get("/", async (req, res) => {
@@ -35,9 +36,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-
 // Search and filter homes
-router.get('/search', async (req, res) => {
+router.get("/search", async (req, res) => {
   try {
     const { location, minPrice, maxPrice, minRating } = req.query;
 
@@ -46,7 +46,7 @@ router.get('/search', async (req, res) => {
 
     // Add filters based on query parameters
     if (location) {
-      query.location = { $regex: location, $options: 'i' }; // Case-insensitive search
+      query.location = { $regex: location, $options: "i" }; // Case-insensitive search
     }
     if (minPrice) {
       query.price = { ...query.price, $gte: Number(minPrice) }; // Greater than or equal to minPrice
@@ -65,8 +65,6 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
-
 
 // Get a single home by ID
 router.get("/:id", async (req, res) => {
@@ -94,7 +92,7 @@ router.put("/:id", async (req, res) => {
         description,
         location,
         price,
-        imageUrl
+        imageUrl,
       },
       { new: true } // Return the updated document
     );
@@ -133,8 +131,9 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Add a review to a home by ID
-router.post('/:id/review', async (req, res) => {
-  const { user, comment, rating } = req.body;
+router.post('/:id/review', authenticateToken, async (req, res) => {
+  const { comment, rating } = req.body;
+  const userId = req.user.id; // Get the logged-in user's ID from the token
 
   try {
     // Check if the provided ID is valid
@@ -143,8 +142,8 @@ router.post('/:id/review', async (req, res) => {
     }
 
     // Validate review data
-    if (!user || !comment || rating == null) {
-      return res.status(400).json({ message: 'All review fields are required' });
+    if (!comment || rating == null) {
+      return res.status(400).json({ message: 'Comment and rating are required' });
     }
 
     if (rating < 1 || rating > 5) {
@@ -158,7 +157,8 @@ router.post('/:id/review', async (req, res) => {
     }
 
     // Add the new review
-    home.reviews.push({ user, comment, rating });
+    const newReview = { user: userId, comment, rating };
+    home.reviews.push(newReview);
 
     // Calculate the new average rating
     const totalRating = home.reviews.reduce((acc, review) => acc + review.rating, 0);
@@ -170,10 +170,13 @@ router.post('/:id/review', async (req, res) => {
     const updatedHome = await home.save();
 
     res.json(updatedHome);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error('Error occurred:', error.message); // Log the error message
+    res.status(500).json({ message: 'Server Error', error: error.message });
   }
 });
+
+
 
 // Get all reviews for a specific home by ID
 router.get("/:id/reviews", async (req, res) => {
