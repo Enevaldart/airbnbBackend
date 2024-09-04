@@ -133,21 +133,25 @@ router.delete("/:id", async (req, res) => {
 // Add a review to a home by ID
 router.post('/:id/review', authenticateToken, async (req, res) => {
   const { comment, rating } = req.body;
-  const userId = req.user.id; // Get the logged-in user's ID from the token
+
+  // Check if the user is authenticated
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ message: 'Please log in to make reviews' });
+  }
+
+  // Validate review data
+  if (!comment || rating == null) {
+    return res.status(400).json({ message: 'All review fields are required' });
+  }
+
+  if (rating < 1 || rating > 5) {
+    return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+  }
 
   try {
     // Check if the provided ID is valid
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid home ID' });
-    }
-
-    // Validate review data
-    if (!comment || rating == null) {
-      return res.status(400).json({ message: 'Comment and rating are required' });
-    }
-
-    if (rating < 1 || rating > 5) {
-      return res.status(400).json({ message: 'Rating must be between 1 and 5' });
     }
 
     // Find the home by ID
@@ -157,8 +161,11 @@ router.post('/:id/review', authenticateToken, async (req, res) => {
     }
 
     // Add the new review
-    const newReview = { user: userId, comment, rating };
-    home.reviews.push(newReview);
+    home.reviews.push({
+      user: req.user.id, // Use the logged-in user's ID
+      comment,
+      rating
+    });
 
     // Calculate the new average rating
     const totalRating = home.reviews.reduce((acc, review) => acc + review.rating, 0);
@@ -170,12 +177,10 @@ router.post('/:id/review', authenticateToken, async (req, res) => {
     const updatedHome = await home.save();
 
     res.json(updatedHome);
-  } catch (error) {
-    console.error('Error occurred:', error.message); // Log the error message
-    res.status(500).json({ message: 'Server Error', error: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 });
-
 
 
 // Get all reviews for a specific home by ID

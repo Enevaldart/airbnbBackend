@@ -8,6 +8,7 @@ const authorizeRole = require("../middleware/authorizeRole");
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 // Sign up a new user
 router.post("/signup", async (req, res) => {
@@ -70,38 +71,6 @@ router.put(
   }
 );
 
-// User login
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
-
-  try {
-    // Find the user by email
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    // Compare the password
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: "Invalid credentials" });
-    }
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
-    );
-
-    res.json({ message: "Logged in successfully", token });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
 // Get all users (admin only)
 router.get(
   "/users",
@@ -154,31 +123,33 @@ router.get("/profile", authenticateToken, async (req, res) => {
   }
 });
 
-//Change password
-router.put("/update-password", authenticateToken, async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+// User login
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
   try {
-    // Find the logged-in user
-    const user = await User.findById(req.user.id);
+    // Find the user by email
+    const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(400).json({ message: "Invalid email" });
     }
 
-    // Verify the current password
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    // Compare the password
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Current password is incorrect" });
+      return res.status(400).json({ message: "Invalid password" });
     }
 
-    // Hash the new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // Generate JWT token
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      {
+        expiresIn: "1h",
+      }
+    );
 
-    // Save the updated user
-    await user.save();
-
-    res.json({ message: "Password updated successfully" });
+    res.json({ message: "Logged in successfully", token });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -204,20 +175,21 @@ router.delete(
       // Check if the user is trying to delete their own account
       if (req.user.id === req.params.id || req.user.role === "admin") {
         const user = await User.findByIdAndDelete(req.params.id);
-        
+
         if (!user) {
           return res.status(404).json({ message: "User not found" });
         }
-        
+
         res.json({ message: "User deleted successfully" });
       } else {
-        res.status(403).json({ message: "Forbidden: You cannot delete this user" });
+        res
+          .status(403)
+          .json({ message: "Forbidden: You cannot delete this user" });
       }
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
   }
 );
-
 
 module.exports = router;
