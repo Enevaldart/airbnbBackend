@@ -84,33 +84,46 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Update a home by ID
-router.put("/:id", async (req, res) => {
+// Update a home by ID (only by the owner)
+router.put("/:id", authenticateToken, async (req, res) => {
+  const { name, description, location, price, imageUrl } = req.body;
+
   try {
-    const { name, description, location, price, imageUrl, rating } = req.body;
+    // Check if the provided ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid home ID" });
+    }
 
-    // Find the home by ID and update its details
-    const updatedHome = await Home.findByIdAndUpdate(
-      req.params.id,
-      {
-        name,
-        description,
-        location,
-        price,
-        imageUrl,
-      },
-      { new: true } // Return the updated document
-    );
+    // Find the home by ID
+    const home = await Home.findById(req.params.id);
 
-    if (!updatedHome) {
+    if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
+
+    // Check if the authenticated user is the owner of the home
+    if (home.owner.toString() !== req.user.id) {
+      return res.status(403).json({ message: "You do not have permission to update this home" });
+    }
+
+    // Update the home details
+    home.name = name || home.name;
+    home.description = description || home.description;
+    home.location = location || home.location;
+    home.price = price || home.price;
+    home.imageUrl = imageUrl || home.imageUrl;
+
+    // Save the updated home
+    const updatedHome = await home.save();
 
     res.json(updatedHome);
   } catch (err) {
     res.status(400).json({ message: err.message });
   }
 });
+
+module.exports = router;
+
 
 // Delete a home by ID
 router.delete("/:id", async (req, res) => {
