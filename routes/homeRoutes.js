@@ -37,9 +37,6 @@ router.get("/owner/:ownerId", async (req, res) => {
   }
 });
 
-module.exports = router;
-
-
 // Add a new home (by an authenticated user)
 router.post("/", authenticateToken, async (req, res) => {
   const { name, description, location, price, imageUrl } = req.body;
@@ -56,7 +53,7 @@ router.post("/", authenticateToken, async (req, res) => {
     imageUrl,
     rating: 0,
     reviews: [],
-    owner: req.user.id // Associate the home with the authenticated user
+    owner: req.user.id, // Associate the home with the authenticated user
   });
 
   try {
@@ -129,7 +126,9 @@ router.put("/:id", authenticateToken, async (req, res) => {
 
     // Check if the authenticated user is the owner of the home
     if (home.owner.toString() !== req.user.id) {
-      return res.status(403).json({ message: "You do not have permission to update this home" });
+      return res
+        .status(403)
+        .json({ message: "You do not have permission to update this home" });
     }
 
     // Update the home details
@@ -147,9 +146,6 @@ router.put("/:id", authenticateToken, async (req, res) => {
     res.status(400).json({ message: err.message });
   }
 });
-
-module.exports = router;
-
 
 // Delete a home by ID
 router.delete("/:id", async (req, res) => {
@@ -175,44 +171,47 @@ router.delete("/:id", async (req, res) => {
 });
 
 // Add a review to a home by ID
-router.post('/:id/review', authenticateToken, async (req, res) => {
+router.post("/:id/review", authenticateToken, async (req, res) => {
   const { comment, rating } = req.body;
 
   // Check if the user is authenticated
   if (!req.user || !req.user.id) {
-    return res.status(401).json({ message: 'Please log in to make reviews' });
+    return res.status(401).json({ message: "Please log in to make reviews" });
   }
 
   // Validate review data
   if (!comment || rating == null) {
-    return res.status(400).json({ message: 'All review fields are required' });
+    return res.status(400).json({ message: "All review fields are required" });
   }
 
   if (rating < 1 || rating > 5) {
-    return res.status(400).json({ message: 'Rating must be between 1 and 5' });
+    return res.status(400).json({ message: "Rating must be between 1 and 5" });
   }
 
   try {
     // Check if the provided ID is valid
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid home ID' });
+      return res.status(400).json({ message: "Invalid home ID" });
     }
 
     // Find the home by ID
     const home = await Home.findById(req.params.id);
     if (!home) {
-      return res.status(404).json({ message: 'Home not found' });
+      return res.status(404).json({ message: "Home not found" });
     }
 
     // Add the new review
     home.reviews.push({
       user: req.user.id, // Use the logged-in user's ID
       comment,
-      rating
+      rating,
     });
 
     // Calculate the new average rating
-    const totalRating = home.reviews.reduce((acc, review) => acc + review.rating, 0);
+    const totalRating = home.reviews.reduce(
+      (acc, review) => acc + review.rating,
+      0
+    );
     const averageRating = (totalRating / home.reviews.length).toFixed(1);
 
     // Update the home's rating
@@ -225,7 +224,6 @@ router.post('/:id/review', authenticateToken, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
 
 // Get all reviews for a specific home by ID
 router.get("/:id/reviews", async (req, res) => {
@@ -248,33 +246,30 @@ router.get("/:id/reviews", async (req, res) => {
   }
 });
 
-// Get a specific review for a specific home by review ID
-router.get("/:homeId/reviews/:reviewId", async (req, res) => {
+/// Delete a home by ID (only the owner or an admin can delete)
+router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-    // Check if the provided home ID is valid
-    if (!mongoose.Types.ObjectId.isValid(req.params.homeId)) {
+    // Check if the provided ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "Invalid home ID" });
     }
 
-    // Check if the provided review ID is valid
-    if (!mongoose.Types.ObjectId.isValid(req.params.reviewId)) {
-      return res.status(400).json({ message: "Invalid review ID" });
-    }
-
     // Find the home by ID
-    const home = await Home.findById(req.params.homeId);
+    const home = await Home.findById(req.params.id);
     if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
 
-    // Find the specific review by ID within the home's reviews
-    const review = home.reviews.id(req.params.reviewId);
-    if (!review) {
-      return res.status(404).json({ message: "Review not found" });
+    // Check if the user is the owner of the home or an admin
+    if (home.owner.toString() !== req.user.id && req.user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ message: "You are not authorized to delete this home" });
     }
 
-    // Return the specific review
-    res.json(review);
+    // Delete the home
+    await home.remove();
+    res.json({ message: "Home deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
