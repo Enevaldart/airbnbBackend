@@ -14,6 +14,32 @@ router.get("/", async (req, res) => {
   }
 });
 
+// Get all homes owned by a specific user
+router.get("/owner/:ownerId", async (req, res) => {
+  try {
+    // Validate the provided user ID
+    if (!mongoose.Types.ObjectId.isValid(req.params.ownerId)) {
+      return res.status(400).json({ message: "Invalid owner ID" });
+    }
+
+    // Find all homes that are owned by the specific user
+    const homes = await Home.find({ owner: req.params.ownerId });
+
+    // If no homes are found, return a 404 status
+    if (homes.length === 0) {
+      return res.status(404).json({ message: "No homes found for this owner" });
+    }
+
+    // Return the list of homes
+    res.json(homes);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+module.exports = router;
+
+
 // Add a new home (by an authenticated user)
 router.post("/", authenticateToken, async (req, res) => {
   const { name, description, location, price, imageUrl } = req.body;
