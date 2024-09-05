@@ -14,10 +14,14 @@ router.get("/", async (req, res) => {
   }
 });
 
-// Add a new home
-router.post("/", async (req, res) => {
-  const { name, description, location, price, imageUrl, rating } = req.body;
+// Add a new home (by an authenticated user)
+router.post("/", authenticateToken, async (req, res) => {
+  const { name, description, location, price, imageUrl } = req.body;
 
+  // Validate the required fields
+  if (!name || !description || !location || !price || !imageUrl) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
   const home = new Home({
     name,
     description,
@@ -26,6 +30,7 @@ router.post("/", async (req, res) => {
     imageUrl,
     rating: 0,
     reviews: [],
+    owner: req.user.id // Associate the home with the authenticated user
   });
 
   try {
