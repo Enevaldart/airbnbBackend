@@ -94,6 +94,24 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// Get all homes owned by the logged-in user
+router.get("/myhomes", authenticateToken, async (req, res) => {
+  try {
+    // Find homes where the owner is the logged-in user
+    const userHomes = await Home.find({ owner: req.user.id });
+    
+    // If no homes are found, return an empty array
+    if (userHomes.length === 0) {
+      return res.status(200).json({ message: "No homes found for this user", homes: [] });
+    }
+
+    // Return the list of homes
+    res.json(userHomes);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get a single home by ID
 router.get("/:id", async (req, res) => {
   try {
@@ -106,6 +124,7 @@ router.get("/:id", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 // Update a home by ID (only by the owner)
 router.put("/:id", authenticateToken, async (req, res) => {
