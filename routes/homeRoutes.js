@@ -39,7 +39,7 @@ router.get("/owner/:ownerId", async (req, res) => {
 
 // Add a new home (by an authenticated user)
 router.post("/", authenticateToken, async (req, res) => {
-  const { name, description, location, price, imageUrl } = req.body;
+  const { name, description, location, price, imageUrl, amenities } = req.body;
 
   // Validate the required fields
   if (
@@ -50,12 +50,10 @@ router.post("/", authenticateToken, async (req, res) => {
     !Array.isArray(imageUrl) ||
     imageUrl.length === 0
   ) {
-    return res
-      .status(400)
-      .json({
-        message:
-          "All fields are required, and imageUrl must be an array with at least one image.",
-      });
+    return res.status(400).json({
+      message:
+        "All fields are required, and imageUrl must be an array with at least one image.",
+    });
   }
 
   const home = new Home({
@@ -64,6 +62,7 @@ router.post("/", authenticateToken, async (req, res) => {
     location,
     price,
     imageUrl,
+    amenities: amenities || [], // Include amenities in home creation
     rating: 0,
     reviews: [],
     owner: req.user.id, // Associate the home with the authenticated user
@@ -142,7 +141,7 @@ router.get("/:id", async (req, res) => {
 
 // Update a home by ID (only by the owner)
 router.put("/:id", authenticateToken, async (req, res) => {
-  const { name, description, location, price, imageUrl } = req.body;
+  const { name, description, location, price, imageUrl, amenities } = req.body;
 
   try {
     // Check if the provided ID is valid
@@ -170,6 +169,7 @@ router.put("/:id", authenticateToken, async (req, res) => {
     home.location = location || home.location;
     home.price = price || home.price;
     home.imageUrl = Array.isArray(imageUrl) ? imageUrl : home.imageUrl; // Ensure it's an array
+    home.amenities = amenities || home.amenities; // Update amenities
 
     // Save the updated home
     const updatedHome = await home.save();

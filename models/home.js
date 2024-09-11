@@ -14,7 +14,8 @@ const homeSchema = new mongoose.Schema({
   imageUrl: { type: [String], required: true },
   rating: { type: Number, default: 0 },
   reviews: { type: [reviewSchema], default: [] },
-  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true } // Owner field
+  owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  amenities: { type: [String], default: [] } // New amenities field
 });
 
 module.exports = mongoose.model("Home", homeSchema);
