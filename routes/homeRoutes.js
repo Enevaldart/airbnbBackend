@@ -203,6 +203,8 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+//reviews
+
 // Add a review to a home by ID
 router.post("/:id/review", authenticateToken, async (req, res) => {
   const { comment, rating } = req.body;
