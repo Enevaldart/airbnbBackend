@@ -2,7 +2,33 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Home = require("../models/home");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 const { authenticateToken } = require("../middleware/authenticateToken");
+
+
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = "./uploads/homes";
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function (req, file, cb) {
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      return cb(new Error('Only image files are allowed!'), false);
+    }
+    cb(null, true);
+  }
+});
 
 // Get all homes
 router.get("/", async (req, res) => {
@@ -38,43 +64,44 @@ router.get("/owner/:ownerId", async (req, res) => {
 });
 
 // Add a new home (by an authenticated user)
-router.post("/", authenticateToken, async (req, res) => {
-  const { name, description, location, price, imageUrl, amenities } = req.body;
+router.post("/", authenticateToken, upload.array('images', 5), async (req, res) => {
+  const { name, description, location, price, amenities } = req.body;
 
   // Validate the required fields
-  if (
-    !name ||
-    !description ||
-    !location ||
-    !price ||
-    !Array.isArray(imageUrl) ||
-    imageUrl.length === 0
-  ) {
+  if (!name || !description || !location || !price || !req.files || req.files.length === 0) {
     return res.status(400).json({
-      message:
-        "All fields are required, and imageUrl must be an array with at least one image.",
+      message: "All fields are required, including at least one image.",
     });
   }
+
+  const imageUrls = req.files.map(file => `/uploads/homes/${file.filename}`);
 
   const home = new Home({
     name,
     description,
     location,
     price,
-    imageUrl,
-    amenities: amenities || [], // Include amenities in home creation
+    imageUrl: imageUrls,
+    amenities: amenities ? JSON.parse(amenities) : [],
     rating: 0,
     reviews: [],
-    owner: req.user.id, // Associate the home with the authenticated user
+    owner: req.user.id,
   });
 
   try {
     const savedHome = await home.save();
     res.status(201).json(savedHome);
   } catch (err) {
+    // If there's an error, we should delete the uploaded files
+    imageUrls.forEach(url => {
+      fs.unlink(`.${url}`, (err) => {
+        if (err) console.error("Error deleting file:", err);
+      });
+    });
     res.status(400).json({ message: err.message });
   }
 });
+
 
 // Search and filter homes
 router.get("/search", async (req, res) => {
@@ -140,38 +167,37 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update a home by ID (only by the owner)
-router.put("/:id", authenticateToken, async (req, res) => {
-  const { name, description, location, price, imageUrl, amenities } = req.body;
+router.put("/:id", authenticateToken, upload.array('images', 5), async (req, res) => {
+  const { name, description, location, price, amenities } = req.body;
 
   try {
-    // Check if the provided ID is valid
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "Invalid home ID" });
     }
 
-    // Find the home by ID
     const home = await Home.findById(req.params.id);
 
     if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
 
-    // Check if the authenticated user is the owner of the home
     if (home.owner.toString() !== req.user.id) {
-      return res
-        .status(403)
-        .json({ message: "You do not have permission to update this home" });
+      return res.status(403).json({ message: "You do not have permission to update this home" });
     }
 
-    // Update the home details, ensuring imageUrl is an array if provided
+    // Update the home details
     home.name = name || home.name;
     home.description = description || home.description;
     home.location = location || home.location;
     home.price = price || home.price;
-    home.imageUrl = Array.isArray(imageUrl) ? imageUrl : home.imageUrl; // Ensure it's an array
-    home.amenities = amenities || home.amenities; // Update amenities
+    home.amenities = amenities ? JSON.parse(amenities) : home.amenities;
 
-    // Save the updated home
+    // Handle new image uploads
+    if (req.files && req.files.length > 0) {
+      const newImageUrls = req.files.map(file => `/uploads/homes/${file.filename}`);
+      home.imageUrl = [...home.imageUrl, ...newImageUrls];
+    }
+
     const updatedHome = await home.save();
 
     res.json(updatedHome);
@@ -180,25 +206,33 @@ router.put("/:id", authenticateToken, async (req, res) => {
   }
 });
 
-// Delete a home by ID
-router.delete("/:id", async (req, res) => {
+// Delete a home by ID (only the owner or an admin can delete)
+router.delete("/:id", authenticateToken, async (req, res) => {
   try {
-    // Check if the provided ID is valid
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: "Invalid home ID" });
     }
 
-    const home = await Home.findByIdAndDelete(req.params.id);
-
-    // If the home is not found, return a 404 error
+    const home = await Home.findById(req.params.id);
     if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
 
-    // If the home is successfully deleted, return a success message
+    if (home.owner.toString() !== req.user.id && req.user.role !== "admin") {
+      return res.status(403).json({ message: "You are not authorized to delete this home" });
+    }
+
+    // Delete associated image files
+    home.imageUrl.forEach(url => {
+      fs.unlink(`.${url}`, (err) => {
+        if (err) console.error("Error deleting file:", err);
+      });
+    });
+
+    // Delete the home from the database
+    await Home.findByIdAndDelete(req.params.id);
     res.json({ message: "Home deleted successfully" });
   } catch (err) {
-    // If there's a server error, return a 500 error
     res.status(500).json({ message: err.message });
   }
 });
