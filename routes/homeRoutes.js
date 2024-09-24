@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Home = require("../models/home");
+const User = require('../models/user');
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -302,8 +303,10 @@ router.get("/:id/reviews", async (req, res) => {
       return res.status(400).json({ message: "Invalid home ID" });
     }
 
-    // Find the home by ID
-    const home = await Home.findById(req.params.id);
+    // Find the home by ID and populate the user field in reviews with the username
+    const home = await Home.findById(req.params.id)
+      .populate('reviews.user', 'username'); // Only populate the 'username' field
+
     if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
@@ -314,6 +317,7 @@ router.get("/:id/reviews", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 /// Delete a home by ID (only the owner or an admin can delete)
 router.delete("/:id", authenticateToken, async (req, res) => {
