@@ -10,7 +10,6 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
-// Sign up a new user
 router.post("/signup", async (req, res) => {
   const { username, email, password, role } = req.body;
 
@@ -21,20 +20,35 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
+    console.log("0");
+
     // Assign role or default to 'user'
     const userRole = role || "user";
+    console.log("1");
 
     // Create a new user
     const newUser = new User({ username, email, password, role: userRole });
-    const savedUser = await newUser.save();
+    console.log("User object created:", newUser);
 
-    res
-      .status(201)
-      .json({ message: "User created successfully", user: savedUser });
+    // Save the user and handle specific errors
+    const savedUser = await newUser.save();
+    console.log("User saved:", savedUser);
+
+    res.status(201).json({ message: "User created successfully", user: savedUser });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    if (err.name === 'ValidationError') {
+      console.error("Validation error:", err);
+      return res.status(400).json({ message: "Validation error", error: err });
+    } else if (err.code === 11000) {
+      console.error("Duplicate key error:", err);
+      return res.status(400).json({ message: "Email or username already in use" });
+    } else {
+      console.error("Error occurred:", err);
+      res.status(500).json({ message: "An error occurred", error: err });
+    }
   }
 });
+
 
 // Update user role (admin only)
 router.put(
