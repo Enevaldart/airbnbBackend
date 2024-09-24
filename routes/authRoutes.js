@@ -11,7 +11,7 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
 router.post("/signup", async (req, res) => {
-  const { username, email, password, role } = req.body;
+  const { username, email, password, role, address, phoneNumber, idNumber } = req.body;
 
   try {
     // Check if the user already exists
@@ -20,14 +20,19 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    console.log("0");
-
     // Assign role or default to 'user'
     const userRole = role || "user";
-    console.log("1");
 
     // Create a new user
-    const newUser = new User({ username, email, password, role: userRole });
+    const newUser = new User({
+      username,
+      email,
+      password,
+      role: userRole,
+      address,
+      phoneNumber,
+      idNumber
+    });
     console.log("User object created:", newUser);
 
     // Save the user and handle specific errors

@@ -8,7 +8,10 @@ const UserSchema = new mongoose.Schema({
   otp: { type: Number, default: null },
   otpExpires: { type: Date, default: null },
   role: { type: String, enum: ['user', 'admin'], default: 'user' },
-}, { timestamps: true });  // Adds createdAt and updatedAt fields
+  address: { type: String },
+  phoneNumber: { type: Number },
+  idNumber: { type: Number },
+}, { timestamps: true });
 
 // Hash the password before saving the user
 UserSchema.pre('save', async function(next) {
