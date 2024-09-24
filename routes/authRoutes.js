@@ -10,6 +10,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
+//create a user
 router.post("/signup", async (req, res) => {
   const { username, email, password, role, address, phoneNumber, idNumber } = req.body;
 
@@ -182,6 +183,46 @@ router.post("/signout", authenticateToken, (req, res) => {
   blacklistedTokens.add(token);
 
   res.json({ message: "Signed out successfully" });
+});
+
+// Update user profile (owner or admin only)
+router.put("/profile", authenticateToken, async (req, res) => {
+  const { username, email, address, phoneNumber, idNumber } = req.body;
+
+  // Validate that the username and email are provided
+  if (!username && !email && !address && !phoneNumber && !idNumber) {
+    return res.status(400).json({ message: "At least one field must be provided to update." });
+  }
+
+  try {
+    // Fetch the current user from the database
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check if the user is trying to update their own profile or if the requester is an admin
+    if (req.user.id !== user._id.toString() && req.user.role !== "admin") {
+      return res.status(403).json({ message: "Forbidden: You cannot update this profile" });
+    }
+
+    // Update fields only if they are provided
+    if (username) user.username = username;
+    if (email) user.email = email;
+    if (address) user.address = address;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (idNumber) user.idNumber = idNumber;
+
+    // Save the updated user profile
+    const updatedUser = await user.save();
+
+    // Exclude the password from the response
+    const { password, ...userWithoutPassword } = updatedUser.toObject();
+
+    res.json({ message: "Profile updated successfully", user: userWithoutPassword });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 });
 
 // Delete a user (admin only or self-deletion)
