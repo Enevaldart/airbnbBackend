@@ -10,9 +10,9 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 
-//create a user
+// Signup route
 router.post("/signup", async (req, res) => {
-  const { username, email, password, role, address, phoneNumber, idNumber } = req.body;
+  const { username, email, password, address, phoneNumber, idNumber, companyName, languagesSpoken, companyDescription } = req.body;
 
   try {
     // Check if the user already exists
@@ -21,39 +21,37 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "User already exists" });
     }
 
-    // Assign role or default to 'user'
-    const userRole = role || "user";
+    // Default role to 'user', preventing self-assignment of 'admin'
+    const userRole = "user";
 
     // Create a new user
     const newUser = new User({
       username,
       email,
       password,
-      role: userRole,
+      role: userRole, // Always 'user' for signup
       address,
       phoneNumber,
-      idNumber
+      idNumber,
+      companyName: companyName || "Independent",
+      languagesSpoken: languagesSpoken || ["English"],
+      companyDescription: companyDescription || "No description provided",
     });
-    console.log("User object created:", newUser);
 
-    // Save the user and handle specific errors
+    // Save the user
     const savedUser = await newUser.save();
-    console.log("User saved:", savedUser);
-
     res.status(201).json({ message: "User created successfully", user: savedUser });
   } catch (err) {
     if (err.name === 'ValidationError') {
-      console.error("Validation error:", err);
       return res.status(400).json({ message: "Validation error", error: err });
     } else if (err.code === 11000) {
-      console.error("Duplicate key error:", err);
       return res.status(400).json({ message: "Email or username already in use" });
     } else {
-      console.error("Error occurred:", err);
       res.status(500).json({ message: "An error occurred", error: err });
     }
   }
 });
+
 
 
 // Update user role (admin only)

@@ -11,6 +11,9 @@ const UserSchema = new mongoose.Schema({
   address: { type: String },
   phoneNumber: { type: Number },
   idNumber: { type: Number },
+  companyName: { type: String, default: 'Independent' },
+  languagesSpoken: { type: [String], default: ['English'] },
+  companyDescription: { type: String, default: 'No company description provided' },
 }, { timestamps: true });
 
 // Hash the password before saving the user

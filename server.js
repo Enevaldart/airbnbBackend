@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 
+const User = require('./models/user'); // Import the User model
 
 const app = express();
 
@@ -11,10 +12,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-  .then(() => console.log('MongoDB connected'))
+  .then(() => {
+    console.log('MongoDB connected');
+    
+    // Create the first admin user
+    createFirstAdmin();
+  })
   .catch(err => console.log(err));
 
 // Root route
@@ -31,6 +36,27 @@ app.use('/api/auth', authRoutes);
 
 // Serve static files from the "uploads" directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Function to create the first admin
+async function createFirstAdmin() {
+  try {
+    const adminExists = await User.findOne({ role: 'admin' });
+    if (!adminExists) {
+      const admin = new User({
+        username: process.env.ADMIN_USERNAME || 'admin',
+        email: process.env.ADMIN_EMAIL || 'admin@example.com',
+        password: process.env.ADMIN_PASSWORD || 'admin123',
+        role: 'admin',
+      });
+      await admin.save();
+      console.log('First admin user created');
+    } else {
+      console.log('Admin user already exists');
+    }
+  } catch (err) {
+    console.error('Error creating the first admin:', err);
+  }
+}
 
 // Start the server
 const port = process.env.PORT || 5000;
