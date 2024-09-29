@@ -69,7 +69,7 @@ router.get("/owner/:ownerId", async (req, res) => {
 
 // Add a new home (by an authenticated user)
 router.post("/", authenticateToken, upload.array('images', 30), async (req, res) => {
-  const { name, description, location, price, amenities } = req.body;
+  const { name, description, location, price, amenities, bedrooms, beds } = req.body;
 
   if (!name || !description || !location || !price || !req.files || req.files.length === 0) {
     return res.status(400).json({
