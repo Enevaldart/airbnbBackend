@@ -13,6 +13,8 @@ const homeSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   imageUrl: { type: [String], required: true },
   rating: { type: Number, default: 0 },
+  bedrooms: { type: Number, default: 1 },
+  beds: { type : String, default: 1 },
   reviews: { type: [reviewSchema], default: [] },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amenities: { type: [String], default: [] } // New amenities field

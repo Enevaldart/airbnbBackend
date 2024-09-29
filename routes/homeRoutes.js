@@ -87,6 +87,8 @@ router.post("/", authenticateToken, upload.array('images', 30), async (req, res)
     imageUrl: imageUrls,
     amenities: amenities ? JSON.parse(amenities) : [],
     rating: 0,
+    bedrooms,
+    beds,
     reviews: [],
     owner: req.user.id,
   });
