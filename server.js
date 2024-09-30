@@ -37,6 +37,9 @@ app.use('/api/auth', authRoutes);
 const ownerStatsRoutes = require('./routes/ownerStatsRoutes');
 app.use('/api/home-owner-stats', ownerStatsRoutes);
 
+const bookingRoutes = require('./routes/bookingRoutes');
+app.use('/api/booking', bookingRoutes);
+
 // Serve static files from the "uploads" directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
