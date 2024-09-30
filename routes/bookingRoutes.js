@@ -28,7 +28,9 @@ router.post("/", async (req, res) => {
     }
 
     // Calculate total price (nights * price per night)
-    const totalPrice = nights * home.price;
+    const calculatedPrice = nights * home.price;
+    const totalPrice = calculatedPrice * 1.04;
+    
 
     // Create the booking
     const newBooking = await Booking.create({
@@ -59,6 +61,35 @@ router.get("/", async (req, res) => {
     res.status(500).json({ message: "Failed to retrieve bookings", error: error.message });
   }
 });
+
+// View all bookings with selected details
+router.get("/summary", async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .select("createdAt checkIn checkOut clientName totalPrice home") // Select relevant fields
+      .populate("home", "name") // Populate the home name only
+      .lean(); // Convert Mongoose documents to plain JavaScript objects
+
+    if (!bookings.length) {
+      return res.status(404).json({ message: "No bookings found" });
+    }
+
+    // Format the bookings to show only the necessary details
+    const formattedBookings = bookings.map((booking) => ({
+      bookingTime: booking.createdAt,
+      checkInDate: booking.checkIn,
+      checkOutDate: booking.checkOut,
+      clientName: booking.clientName,
+      homeName: booking.home.name, // Assuming the "home" model has a "name" field
+      totalPrice: booking.totalPrice,
+    }));
+
+    res.json(formattedBookings);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to retrieve bookings", error: error.message });
+  }
+});
+
 
 // View bookings for a specific home
 router.get("/homes/:homeId/bookings", async (req, res) => {
