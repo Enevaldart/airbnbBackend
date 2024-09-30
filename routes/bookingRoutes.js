@@ -66,7 +66,7 @@ router.get("/", async (req, res) => {
 router.get("/summary", async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .select("createdAt checkIn checkOut clientName totalPrice home") // Select relevant fields
+      .select("createdAt checkIn checkOut clientName totalPrice home clientEmail clientPhone") // Select relevant fields
       .populate("home", "name") // Populate the home name only
       .lean(); // Convert Mongoose documents to plain JavaScript objects
 
@@ -80,7 +80,10 @@ router.get("/summary", async (req, res) => {
       checkInDate: booking.checkIn,
       checkOutDate: booking.checkOut,
       clientName: booking.clientName,
+      clientEmail: booking.clientEmail,
+      clientPhone: booking.clientPhone,
       homeName: booking.home.name, // Assuming the "home" model has a "name" field
+      homeId: booking.home._id,
       totalPrice: booking.totalPrice,
     }));
 
