@@ -2,15 +2,33 @@ const express = require("express");
 const mongoose = require("mongoose");
 const router = express.Router();
 const Booking = require("../models/booking");
-const Home = require('../models/home');
+const Home = require("../models/home");
+const nodemailer = require("nodemailer");
+
+// Configure Nodemailer
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 // Create a new booking
 router.post("/", async (req, res) => {
-  const { homeId, clientName, clientEmail, clientPhone, checkIn, checkOut } = req.body;
-  console.log(req.body); 
+  const { homeId, clientName, clientEmail, clientPhone, checkIn, checkOut } =
+    req.body;
+
   try {
     // Validate request data
-    if (!homeId || !clientName || !clientEmail || !clientPhone || !checkIn || !checkOut) {
+    if (
+      !homeId ||
+      !clientName ||
+      !clientEmail ||
+      !clientPhone ||
+      !checkIn ||
+      !checkOut
+    ) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -21,16 +39,17 @@ router.post("/", async (req, res) => {
     // Calculate the number of nights
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
-
     const nights = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24);
+
     if (nights <= 0) {
-      return res.status(400).json({ message: "Check-out date must be after check-in date" });
+      return res
+        .status(400)
+        .json({ message: "Check-out date must be after check-in date" });
     }
 
     // Calculate total price (nights * price per night)
     const calculatedPrice = nights * home.price;
     const totalPrice = calculatedPrice * 1.04;
-    
 
     // Create the booking
     const newBooking = await Booking.create({
@@ -43,7 +62,38 @@ router.post("/", async (req, res) => {
       totalPrice,
     });
 
-    res.status(201).json(newBooking);
+    // Send confirmation email
+    const mailOptions = {
+      from: process.env.EMAIL_USER, // Sender address
+      to: clientEmail, // Receiver's email
+      subject: "Booking Confirmation",
+      text: `Dear ${clientName},
+
+Thank you for your booking! Here are your booking details:
+
+- Hotel Name: ${home.name}
+- Check-in Date: ${checkInDate.toDateString()}
+- Check-out Date: ${checkOutDate.toDateString()}
+- Total Price: Ksh ${totalPrice.toFixed(2)}
+
+We look forward to welcoming you soon!
+
+Best regards,
+The Team`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error("Error sending email:", error);
+        // Log the error, but still respond with booking details
+        return res
+          .status(500)
+          .json({ message: "Booking successful, but email sending failed." });
+      }
+      console.log("Email sent:", info.response);
+      // Respond with booking confirmation after email is sent
+      return res.status(201).json(newBooking);
+    });
   } catch (error) {
     res.status(500).json({ message: "Booking failed", error: error.message });
   }
@@ -58,7 +108,9 @@ router.get("/", async (req, res) => {
     }
     res.json(bookings);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve bookings", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve bookings", error: error.message });
   }
 });
 
@@ -66,7 +118,9 @@ router.get("/", async (req, res) => {
 router.get("/summary", async (req, res) => {
   try {
     const bookings = await Booking.find()
-      .select("createdAt checkIn checkOut clientName totalPrice home clientEmail clientPhone") // Select relevant fields
+      .select(
+        "createdAt checkIn checkOut clientName totalPrice home clientEmail clientPhone"
+      ) // Select relevant fields
       .populate("home", "name") // Populate the home name only
       .lean(); // Convert Mongoose documents to plain JavaScript objects
 
@@ -89,10 +143,11 @@ router.get("/summary", async (req, res) => {
 
     res.json(formattedBookings);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve bookings", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve bookings", error: error.message });
   }
 });
-
 
 // View bookings for a specific home
 router.get("/homes/:homeId/bookings", async (req, res) => {
@@ -101,11 +156,15 @@ router.get("/homes/:homeId/bookings", async (req, res) => {
     const bookings = await Booking.find({ home: homeId }).populate("home");
 
     if (!bookings.length) {
-      return res.status(404).json({ message: "No bookings found for this home" });
+      return res
+        .status(404)
+        .json({ message: "No bookings found for this home" });
     }
     res.json(bookings);
   } catch (error) {
-    res.status(500).json({ message: "Failed to retrieve bookings", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve bookings", error: error.message });
   }
 });
 
