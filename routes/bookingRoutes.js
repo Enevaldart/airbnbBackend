@@ -4,6 +4,7 @@ const router = express.Router();
 const Booking = require("../models/booking");
 const Home = require("../models/home");
 const nodemailer = require("nodemailer");
+const jwt = require('jsonwebtoken'); // For generating a secure token
 
 // Configure Nodemailer
 const transporter = nodemailer.createTransport({
@@ -62,11 +63,21 @@ router.post("/", async (req, res) => {
       totalPrice,
     });
 
-    // Send confirmation email
+    // Generate a JWT token for review (valid for 7 days)
+    const reviewToken = jwt.sign(
+      { bookingId: newBooking._id, homeId: homeId, clientEmail: clientEmail },
+      process.env.JWT_SECRET,
+      { expiresIn: '7d' } // Token will expire in 7 days
+    );
+
+    // Generate review URL
+    const reviewLink = `${process.env.FRONTEND_URL}/homes/${homeId}/review?token=${reviewToken}`;
+
+    // Send confirmation email with review link
     const mailOptions = {
       from: process.env.EMAIL_USER, // Sender address
       to: clientEmail, // Receiver's email
-      subject: "Booking Confirmation",
+      subject: "Booking Confirmation and Review Link",
       text: `Dear ${clientName},
 
 Thank you for your booking! Here are your booking details:
@@ -76,7 +87,11 @@ Thank you for your booking! Here are your booking details:
 - Check-out Date: ${checkOutDate.toDateString()}
 - Total Price: Ksh ${totalPrice.toFixed(2)}
 
-We look forward to welcoming you soon!
+We would love to hear your feedback after your stay. Please leave a review using the link below:
+
+${reviewLink}
+
+This link is valid for 7 days. We look forward to hearing from you!
 
 Best regards,
 The Team`,

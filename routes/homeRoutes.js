@@ -230,27 +230,27 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 //reviews
 
 // Add a review to a home by ID
-router.post("/:id/review", authenticateToken, async (req, res) => {
-  const { comment, rating } = req.body;
-
-  // Check if the user is authenticated
-  if (!req.user || !req.user.id) {
-    return res.status(401).json({ message: "Please log in to make reviews" });
-  }
-
-  // Validate review data
-  if (!comment || rating == null) {
-    return res.status(400).json({ message: "All review fields are required" });
-  }
-
-  if (rating < 1 || rating > 5) {
-    return res.status(400).json({ message: "Rating must be between 1 and 5" });
-  }
+router.post("/:id/review", async (req, res) => {
+  const { comment, rating, token } = req.body;
 
   try {
-    // Check if the provided ID is valid
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(400).json({ message: "Invalid home ID" });
+    // Verify the token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Ensure that the home ID matches the one in the token
+    if (decoded.homeId !== req.params.id) {
+      return res.status(403).json({ message: "Invalid review token for this home" });
+    }
+
+    // Ensure the client's email matches
+    const booking = await Booking.findById(decoded.bookingId);
+    if (!booking || booking.clientEmail !== decoded.clientEmail) {
+      return res.status(403).json({ message: "Invalid client for this review" });
+    }
+
+    // Validate review data
+    if (!comment || rating == null || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "All review fields are required and rating must be between 1 and 5" });
     }
 
     // Find the home by ID
@@ -261,7 +261,7 @@ router.post("/:id/review", authenticateToken, async (req, res) => {
 
     // Add the new review
     home.reviews.push({
-      user: req.user.id, // Use the logged-in user's ID
+      user: booking.clientName,
       comment,
       rating,
     });
@@ -283,6 +283,7 @@ router.post("/:id/review", authenticateToken, async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 
 // Get all reviews for a specific home by ID
 router.get("/:id/reviews", async (req, res) => {
