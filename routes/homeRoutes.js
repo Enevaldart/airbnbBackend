@@ -3,6 +3,8 @@ const mongoose = require("mongoose");
 const router = express.Router();
 const Home = require("../models/home");
 const User = require('../models/user');
+const jwt = require('jsonwebtoken');
+const Booking = require("../models/booking");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
@@ -229,15 +231,13 @@ router.delete("/:id", authenticateToken, async (req, res) => {
 });
 //reviews
 
-// Add a review to a home by ID
 router.post("/:id/review", async (req, res) => {
   const { comment, rating, token } = req.body;
 
   try {
-    // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log('Decoded token:', decoded);
 
-    // Ensure that the home ID matches the one in the token
     if (decoded.homeId !== req.params.id) {
       return res.status(403).json({ message: "Invalid review token for this home" });
     }
@@ -253,13 +253,11 @@ router.post("/:id/review", async (req, res) => {
       return res.status(400).json({ message: "All review fields are required and rating must be between 1 and 5" });
     }
 
-    // Find the home by ID
     const home = await Home.findById(req.params.id);
     if (!home) {
       return res.status(404).json({ message: "Home not found" });
     }
 
-    // Add the new review
     home.reviews.push({
       user: booking.clientName,
       comment,
@@ -272,15 +270,14 @@ router.post("/:id/review", async (req, res) => {
       0
     );
     const averageRating = (totalRating / home.reviews.length).toFixed(1);
-
-    // Update the home's rating
     home.rating = averageRating;
 
     const updatedHome = await home.save();
 
-    res.json(updatedHome);
+    res.json({ message: "Review submitted successfully", home: updatedHome });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('Error submitting review:', err);
+    res.status(500).json({ message: "Error submitting review", error: err.message });
   }
 });
 
