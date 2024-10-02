@@ -124,31 +124,34 @@ router.post(
 );
 
 // Search and filter homes
-router.get("/search", async (req, res) => {
+router.get('/search', async (req, res) => {
   try {
-    const { location, minPrice, maxPrice, minRating } = req.query;
+    const { minPrice, maxPrice, location, name } = req.query;
 
-    const query = {};
+    // Building the search query
+    let query = {};
 
-    if (location) {
-      query.location = { $regex: location, $options: "i" };
-    }
     if (minPrice) {
-      query.price = { ...query.price, $gte: Number(minPrice) };
+      query.price = { ...query.price, $gte: minPrice };
     }
     if (maxPrice) {
-      query.price = { ...query.price, $lte: Number(maxPrice) };
+      query.price = { ...query.price, $lte: maxPrice };
     }
-    if (minRating) {
-      query.rating = { $gte: Number(minRating) };
+    if (location) {
+      query.location = new RegExp(location, 'i');
+    }
+    if (name) {
+      query.name = new RegExp(name, 'i');
     }
 
+    // Execute the query
     const homes = await Home.find(query);
-    res.json(homes);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(200).json(homes);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching homes', error });
   }
 });
+
 
 // Get all homes owned by the logged-in user
 router.get("/myhomes", authenticateToken, async (req, res) => {
