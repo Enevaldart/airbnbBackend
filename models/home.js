@@ -4,6 +4,10 @@ const reviewSchema = new mongoose.Schema({
   user: { type: String, required: true },
   comment: String,
   rating: Number,
+  date: {
+    type: Date,
+    default: Date.now,
+  }
 });
 
 const homeSchema = new mongoose.Schema({
@@ -17,7 +21,7 @@ const homeSchema = new mongoose.Schema({
   beds: { type : String, default: 1 },
   reviews: { type: [reviewSchema], default: [] },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  amenities: { type: [String], default: [] } // New amenities field
+  amenities: { type: [String], default: [] }, // New amenities field
 });
 
 module.exports = mongoose.model("Home", homeSchema);

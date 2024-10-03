@@ -135,15 +135,14 @@ router.get("/summary", async (req, res) => {
     const bookings = await Booking.find()
       .select(
         "createdAt checkIn checkOut clientName totalPrice home clientEmail clientPhone"
-      ) // Select relevant fields
-      .populate("home", "name") // Populate the home name only
-      .lean(); // Convert Mongoose documents to plain JavaScript objects
+      )
+      .populate("home", "name")
+      .lean();
 
     if (!bookings.length) {
       return res.status(404).json({ message: "No bookings found" });
     }
 
-    // Format the bookings to show only the necessary details
     const formattedBookings = bookings.map((booking) => ({
       bookingTime: booking.createdAt,
       checkInDate: booking.checkIn,
@@ -151,7 +150,7 @@ router.get("/summary", async (req, res) => {
       clientName: booking.clientName,
       clientEmail: booking.clientEmail,
       clientPhone: booking.clientPhone,
-      homeName: booking.home.name, // Assuming the "home" model has a "name" field
+      homeName: booking.home.name,
       homeId: booking.home._id,
       totalPrice: booking.totalPrice,
     }));

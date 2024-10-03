@@ -342,6 +342,7 @@ router.get("/:id/reviews", async (req, res) => {
       user: review.user,
       comment: review.comment,
       rating: review.rating,
+      date: review.date,
     }));
 
     // Return the reviews for the home
@@ -351,7 +352,7 @@ router.get("/:id/reviews", async (req, res) => {
   }
 });
 
-/// Delete a home by ID (only the owner or an admin can delete)
+// Delete a home by ID (only the owner or an admin can delete)
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
     // Check if the provided ID is valid
