@@ -68,26 +68,36 @@ router.get("/owner/:ownerId", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
-
 // Add a new home (by an authenticated user)
 router.post(
   "/",
   authenticateToken,
   upload.array("images", 30),
   async (req, res) => {
-    const { name, description, location, price, amenities, bedrooms, beds } =
-      req.body;
+    const {
+      name,
+      description,
+      location,
+      price,
+      amenities,
+      bedrooms,
+      beds,
+      maxGuests,
+      isGuestNumberFixed,
+    } = req.body;
 
     if (
       !name ||
       !description ||
       !location ||
       !price ||
+      !maxGuests ||
       !req.files ||
       req.files.length === 0
     ) {
       return res.status(400).json({
-        message: "All fields are required, including at least one image.",
+        message:
+          "All fields are required, including at least one image and maximum number of guests.",
       });
     }
 
@@ -107,6 +117,8 @@ router.post(
       beds,
       reviews: [],
       owner: req.user.id,
+      maxGuests: parseInt(maxGuests),
+      isGuestNumberFixed: isGuestNumberFixed === "true",
     });
 
     try {
@@ -124,7 +136,7 @@ router.post(
 );
 
 // Search and filter homes
-router.get('/search', async (req, res) => {
+router.get("/search", async (req, res) => {
   try {
     const { minPrice, maxPrice, location, name } = req.query;
 
@@ -138,20 +150,19 @@ router.get('/search', async (req, res) => {
       query.price = { ...query.price, $lte: maxPrice };
     }
     if (location) {
-      query.location = new RegExp(location, 'i');
+      query.location = new RegExp(location, "i");
     }
     if (name) {
-      query.name = new RegExp(name, 'i');
+      query.name = new RegExp(name, "i");
     }
 
     // Execute the query
     const homes = await Home.find(query);
     res.status(200).json(homes);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching homes', error });
+    res.status(500).json({ message: "Error fetching homes", error });
   }
 });
-
 
 // Get all homes owned by the logged-in user
 router.get("/myhomes", authenticateToken, async (req, res) => {
@@ -183,13 +194,22 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// Update a home by ID (only by the owner)
+// Update the PUT route for updating a home
 router.put(
   "/:id",
   authenticateToken,
   upload.array("images", 30),
   async (req, res) => {
-    const { name, description, location, price, amenities, deleteImages } = req.body;
+    const {
+      name,
+      description,
+      location,
+      price,
+      amenities,
+      deleteImages,
+      maxGuests,
+      isGuestNumberFixed,
+    } = req.body;
 
     try {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -228,6 +248,11 @@ router.put(
       home.location = location || home.location;
       home.price = price || home.price;
       home.amenities = amenities ? JSON.parse(amenities) : home.amenities;
+      home.maxGuests = maxGuests ? parseInt(maxGuests) : home.maxGuests;
+      home.isGuestNumberFixed =
+        isGuestNumberFixed !== undefined
+          ? isGuestNumberFixed === "true"
+          : home.isGuestNumberFixed;
 
       if (req.files && req.files.length > 0) {
         const newImageUrls = req.files.map(
@@ -300,12 +325,10 @@ router.post("/:id/review", async (req, res) => {
 
     // Validate review data
     if (!comment || rating == null || rating < 1 || rating > 5) {
-      return res
-        .status(400)
-        .json({
-          message:
-            "All review fields are required and rating must be between 1 and 5",
-        });
+      return res.status(400).json({
+        message:
+          "All review fields are required and rating must be between 1 and 5",
+      });
     }
 
     const home = await Home.findById(req.params.id);

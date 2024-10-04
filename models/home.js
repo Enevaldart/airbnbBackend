@@ -21,7 +21,9 @@ const homeSchema = new mongoose.Schema({
   beds: { type : String, default: 1 },
   reviews: { type: [reviewSchema], default: [] },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  amenities: { type: [String], default: [] }, // New amenities field
+  amenities: { type: [String], default: [] },
+  maxGuests: { type: Number, required: true },
+  isGuestNumberFixed: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model("Home", homeSchema);

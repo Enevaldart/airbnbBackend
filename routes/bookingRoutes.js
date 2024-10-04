@@ -17,7 +17,7 @@ const transporter = nodemailer.createTransport({
 
 // Create a new booking
 router.post("/", async (req, res) => {
-  const { homeId, clientName, clientEmail, clientPhone, checkIn, checkOut } =
+  const { homeId, clientName, clientEmail, clientPhone, checkIn, checkOut, guestCount } =
     req.body;
 
   try {
@@ -28,9 +28,24 @@ router.post("/", async (req, res) => {
       !clientEmail ||
       !clientPhone ||
       !checkIn ||
-      !checkOut
+      !checkOut ||
+      !guestCount
     ) {
       return res.status(400).json({ message: "All fields are required" });
+    }
+
+     // Check if the number of guests exceeds the maximum
+     if (guestCount > home.maxGuests) {
+      if (home.isGuestNumberFixed) {
+        return res.status(400).json({ 
+          message: "The number of guests exceeds the home's capacity. Please contact the owner for special arrangements.",
+          ownerContact: "Please implement a way to contact the owner here."
+        });
+      } else {
+        return res.status(400).json({ 
+          message: "The number of guests exceeds the home's recommended capacity."
+        });
+      }
     }
 
     // Find the home being booked
@@ -61,13 +76,14 @@ router.post("/", async (req, res) => {
       checkIn: checkInDate,
       checkOut: checkOutDate,
       totalPrice,
+      guestCount,
     });
 
     // Generate a JWT token for review (valid for 7 days)
     const reviewToken = jwt.sign(
       { bookingId: newBooking._id, homeId: homeId, clientEmail: clientEmail },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "21d" }
     );
 
     // Generate review URL
@@ -137,7 +153,7 @@ router.post("/create-review-link/:bookingId", async (req, res) => {
         clientEmail: booking.clientEmail,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "21d" }
     );
 
     // Generate review URL
@@ -156,7 +172,7 @@ router.post("/create-review-link/:bookingId", async (req, res) => {
 
       ${booking.reviewLink}
 
-      This link is valid for 7 days. We look forward to your review!
+      This link is valid for 21 days. We look forward to your review!
 
       Best regards,
       The Team`,
@@ -207,7 +223,7 @@ router.post("/send-review-link/:bookingId", async (req, res) => {
 
       ${booking.reviewLink}
 
-      This link is valid for 7 days. We look forward to your review!
+      This link is valid for 21 days. We look forward to your review!
 
       Best regards,
       The Team`,
