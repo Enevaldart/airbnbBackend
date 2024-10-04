@@ -189,7 +189,7 @@ router.put(
   authenticateToken,
   upload.array("images", 30),
   async (req, res) => {
-    const { name, description, location, price, amenities } = req.body;
+    const { name, description, location, price, amenities, deleteImages } = req.body;
 
     try {
       if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -208,6 +208,21 @@ router.put(
           .json({ message: "You do not have permission to update this home" });
       }
 
+      // Delete images specified in the 'deleteImages' array
+      if (deleteImages && deleteImages.length > 0) {
+        home.imageUrl = home.imageUrl.filter((imageUrl) => {
+          if (deleteImages.includes(imageUrl)) {
+            // Delete the file from the server
+            fs.unlink(`.${imageUrl}`, (err) => {
+              if (err) console.error("Error deleting file:", err);
+            });
+            return false;
+          }
+          return true;
+        });
+      }
+
+      // Update home details
       home.name = name || home.name;
       home.description = description || home.description;
       home.location = location || home.location;
