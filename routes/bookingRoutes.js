@@ -17,8 +17,15 @@ const transporter = nodemailer.createTransport({
 
 // Create a new booking
 router.post("/", async (req, res) => {
-  const { homeId, clientName, clientEmail, clientPhone, checkIn, checkOut, guestCount } =
-    req.body;
+  const {
+    homeId,
+    clientName,
+    clientEmail,
+    clientPhone,
+    checkIn,
+    checkOut,
+    guestCount,
+  } = req.body;
 
   try {
     // Validate request data
@@ -34,16 +41,18 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-     // Check if the number of guests exceeds the maximum
-     if (guestCount > home.maxGuests) {
+    // Check if the number of guests exceeds the maximum
+    if (guestCount > home.maxGuests) {
       if (home.isGuestNumberFixed) {
-        return res.status(400).json({ 
-          message: "The number of guests exceeds the home's capacity. Please contact the owner for special arrangements.",
-          ownerContact: "Please implement a way to contact the owner here."
+        return res.status(400).json({
+          message:
+            "The number of guests exceeds the home's capacity. Please contact the owner for special arrangements.",
+          ownerContact: "Please implement a way to contact the owner here.",
         });
       } else {
-        return res.status(400).json({ 
-          message: "The number of guests exceeds the home's recommended capacity."
+        return res.status(400).json({
+          message:
+            "The number of guests exceeds the home's recommended capacity.",
         });
       }
     }
