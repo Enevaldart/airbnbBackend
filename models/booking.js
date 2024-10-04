@@ -10,6 +10,8 @@ const bookingSchema = new mongoose.Schema({
   totalPrice: { type: Number, required: true }, // Total price calculated by the server
   status: { type: String, enum: ["pending", "confirmed", "canceled"], default: "confirmed" },
   paymentStatus: { type: String, enum: ["unpaid", "paid"], default: "unpaid" },
+  reviewLink: String,
+  reviewLinkSentAt: Date,
   createdAt: { type: Date, default: Date.now }
 });
 
