@@ -270,6 +270,28 @@ router.put(
   }
 );
 
+// Get the maxGuests for a specific home
+router.get("/:id/maxGuests", async (req, res) => {
+  try {
+    // Check if the provided ID is valid
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid home ID" });
+    }
+
+    // Find the home by ID
+    const home = await Home.findById(req.params.id, "maxGuests");
+
+    if (!home) {
+      return res.status(404).json({ message: "Home not found" });
+    }
+
+    // Return the maxGuests for the home
+    res.json({ maxGuests: home.maxGuests });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Delete a home by ID (only the owner or an admin can delete)
 router.delete("/:id", authenticateToken, async (req, res) => {
   try {
