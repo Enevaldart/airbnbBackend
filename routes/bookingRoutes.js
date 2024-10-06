@@ -15,7 +15,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Create a new booking
 router.post("/", async (req, res) => {
   const {
     homeId,
@@ -24,59 +23,33 @@ router.post("/", async (req, res) => {
     clientPhone,
     checkIn,
     checkOut,
-    guestCount,
+    guests,
   } = req.body;
 
   try {
-    // Validate request data
-    if (
-      !homeId ||
-      !clientName ||
-      !clientEmail ||
-      !clientPhone ||
-      !checkIn ||
-      !checkOut ||
-      !guestCount
-    ) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!homeId || !clientName || !clientEmail || !clientPhone || !checkIn || !checkOut || !guests) {
+      return res.status(400).json({ message: "All fields are required!" });
     }
 
-    // Check if the number of guests exceeds the maximum
-    if (guestCount > home.maxGuests) {
-      if (home.isGuestNumberFixed) {
-        return res.status(400).json({
-          message:
-            "The number of guests exceeds the home's capacity. Please contact the owner for special arrangements.",
-          ownerContact: "Please implement a way to contact the owner here.",
-        });
-      } else {
-        return res.status(400).json({
-          message:
-            "The number of guests exceeds the home's recommended capacity.",
-        });
-      }
-    }
-
-    // Find the home being booked
     const home = await Home.findById(homeId);
     if (!home) return res.status(404).json({ message: "Home not found" });
 
-    // Calculate the number of nights
+    if (guests > home.maxGuests) {
+      return res.status(400).json({
+        message: "The number of guests exceeds the home's capacity.",
+      });
+    }
+
     const checkInDate = new Date(checkIn);
     const checkOutDate = new Date(checkOut);
     const nights = (checkOutDate - checkInDate) / (1000 * 60 * 60 * 24);
-
     if (nights <= 0) {
-      return res
-        .status(400)
-        .json({ message: "Check-out date must be after check-in date" });
+      return res.status(400).json({ message: "Check-out date must be after check-in date" });
     }
 
-    // Calculate total price (nights * price per night)
     const calculatedPrice = nights * home.price;
     const totalPrice = calculatedPrice * 1.04;
 
-    // Create the booking
     const newBooking = await Booking.create({
       home: homeId,
       clientName,
@@ -85,55 +58,21 @@ router.post("/", async (req, res) => {
       checkIn: checkInDate,
       checkOut: checkOutDate,
       totalPrice,
-      guestCount,
+      guests,
     });
 
-    // Generate a JWT token for review (valid for 7 days)
     const reviewToken = jwt.sign(
-      { bookingId: newBooking._id, homeId: homeId, clientEmail: clientEmail },
+      { bookingId: newBooking._id },
       process.env.JWT_SECRET,
-      { expiresIn: "21d" }
+      { expiresIn: "2d" }
     );
 
-    // Generate review URL
-    const reviewLink = `${process.env.FRONTEND_URL}/homes/${homeId}/review?token=${reviewToken}`;
+    const reviewLink = `http://localhost:3000/reviews/${newBooking._id}?token=${reviewToken}`;
 
-    // Save the review link in the booking
-    newBooking.reviewLink = reviewLink;
-    await newBooking.save(); // Ensure the booking is updated with the review link
-
-    // Send confirmation email with booking details (without review link at this time)
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: clientEmail,
-      subject: "Booking Confirmation",
-      text: `Dear ${clientName},
-
-Thank you for your booking! Here are your booking details:
-
-- Home Name: ${home.name}
-- Check-in Date: ${checkInDate.toDateString()}
-- Check-out Date: ${checkOutDate.toDateString()}
-- Total Price: Ksh ${totalPrice.toFixed(2)}
-
-We look forward to hosting you!
-
-Best regards,
-The Team`,
-    };
-
-    transporter.sendMail(mailOptions, (error, info) => {
-      if (error) {
-        console.error("Error sending email:", error);
-        return res
-          .status(500)
-          .json({ message: "Booking successful, but email sending failed." });
-      }
-      console.log("Booking confirmation email sent:", info.response);
-      return res.status(201).json(newBooking);
-    });
+    res.status(200).json({ message: "Booking successful!", booking: newBooking });
   } catch (error) {
-    res.status(500).json({ message: "Booking failed", error: error.message });
+    console.error("Error creating booking:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
