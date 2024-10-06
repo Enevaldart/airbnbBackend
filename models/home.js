@@ -7,7 +7,7 @@ const reviewSchema = new mongoose.Schema({
   date: {
     type: Date,
     default: Date.now,
-  }
+  },
 });
 
 const homeSchema = new mongoose.Schema({
@@ -18,12 +18,12 @@ const homeSchema = new mongoose.Schema({
   imageUrl: { type: [String], required: true },
   rating: { type: Number, default: 0 },
   bedrooms: { type: Number, default: 1 },
-  beds: { type : String, default: 1 },
+  beds: { type: String, default: 1 },
   reviews: { type: [reviewSchema], default: [] },
   owner: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   amenities: { type: [String], default: [] },
   maxGuests: { type: Number, required: true },
-  isGuestNumberFixed: { type: Boolean, default: false }
+  isGuestNumberFixed: { type: Boolean, default: false },
 });
 
 module.exports = mongoose.model("Home", homeSchema);

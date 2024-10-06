@@ -12,7 +12,17 @@ const crypto = require("crypto");
 
 // Signup route
 router.post("/signup", async (req, res) => {
-  const { username, email, password, address, phoneNumber, idNumber, companyName, languagesSpoken, companyDescription } = req.body;
+  const {
+    username,
+    email,
+    password,
+    address,
+    phoneNumber,
+    idNumber,
+    companyName,
+    languagesSpoken,
+    companyDescription,
+  } = req.body;
 
   try {
     // Check if the user already exists
@@ -40,19 +50,21 @@ router.post("/signup", async (req, res) => {
 
     // Save the user
     const savedUser = await newUser.save();
-    res.status(201).json({ message: "User created successfully", user: savedUser });
+    res
+      .status(201)
+      .json({ message: "User created successfully", user: savedUser });
   } catch (err) {
-    if (err.name === 'ValidationError') {
+    if (err.name === "ValidationError") {
       return res.status(400).json({ message: "Validation error", error: err });
     } else if (err.code === 11000) {
-      return res.status(400).json({ message: "Email or username already in use" });
+      return res
+        .status(400)
+        .json({ message: "Email or username already in use" });
     } else {
       res.status(500).json({ message: "An error occurred", error: err });
     }
   }
 });
-
-
 
 // Update user role (admin only)
 router.put(
@@ -189,7 +201,9 @@ router.put("/profile", authenticateToken, async (req, res) => {
 
   // Validate that the username and email are provided
   if (!username && !email && !address && !phoneNumber && !idNumber) {
-    return res.status(400).json({ message: "At least one field must be provided to update." });
+    return res
+      .status(400)
+      .json({ message: "At least one field must be provided to update." });
   }
 
   try {
@@ -201,7 +215,9 @@ router.put("/profile", authenticateToken, async (req, res) => {
 
     // Check if the user is trying to update their own profile or if the requester is an admin
     if (req.user.id !== user._id.toString() && req.user.role !== "admin") {
-      return res.status(403).json({ message: "Forbidden: You cannot update this profile" });
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You cannot update this profile" });
     }
 
     // Update fields only if they are provided
@@ -217,7 +233,10 @@ router.put("/profile", authenticateToken, async (req, res) => {
     // Exclude the password from the response
     const { password, ...userWithoutPassword } = updatedUser.toObject();
 
-    res.json({ message: "Profile updated successfully", user: userWithoutPassword });
+    res.json({
+      message: "Profile updated successfully",
+      user: userWithoutPassword,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

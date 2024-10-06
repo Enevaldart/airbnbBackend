@@ -5,14 +5,16 @@ const blacklistedTokens = new Set();
 
 // Middleware to authenticate token
 function authenticateToken(req, res, next) {
-  const authHeader = req.header('Authorization');
+  const authHeader = req.header("Authorization");
   const token =
     authHeader && authHeader.startsWith("Bearer ")
       ? authHeader.split(" ")[1]
       : null;
 
   if (!token) {
-    return res.status(401).json({ message: "Access Denied: No token provided" });
+    return res
+      .status(401)
+      .json({ message: "Access Denied: No token provided" });
   }
 
   // Check if the token is blacklisted
