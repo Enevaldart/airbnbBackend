@@ -68,6 +68,26 @@ router.post("/", async (req, res) => {
     );
 
     const reviewLink = `http://localhost:3000/reviews/${newBooking._id}?token=${reviewToken}`;
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: clientEmail,
+      subject: "Booking Confirmation",
+      text: `Dear ${clientName},
+
+Thank you for your booking! Here are your booking details:
+
+- Hotel Name: ${home.name}
+- Check-in Date: ${checkInDate}
+- Check-out Date: ${checkOutDate}
+- Total Price: Ksh ${totalPrice}
+
+We would love to hear your feedback after your stay.
+
+      Best regards,
+      The Team`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     res.status(200).json({ message: "Booking successful!", booking: newBooking });
   } catch (error) {
